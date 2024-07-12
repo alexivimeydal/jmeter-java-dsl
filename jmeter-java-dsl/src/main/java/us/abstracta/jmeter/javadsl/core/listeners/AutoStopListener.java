@@ -394,7 +394,7 @@ public class AutoStopListener extends BaseTestElement implements DslListener {
      * @return a condition builder to complete the condition definition.
      */
     public AggregatedConditionBuilder<T> every(Duration period) {
-      ret.setAggregationResetPeriodSeconds(period.getSeconds());
+      ret.setResetPeriodSeconds(period.getSeconds());
       return this;
     }
 

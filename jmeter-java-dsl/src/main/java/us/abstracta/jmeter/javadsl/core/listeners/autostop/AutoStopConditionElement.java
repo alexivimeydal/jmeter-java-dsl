@@ -17,7 +17,7 @@ public class AutoStopConditionElement extends AbstractTestElement {
   private static final String METRIC_PROP = "metric";
   private static final String AGGREGATION_PROP = "aggregation";
   private static final String PERCENTILE_PROP = "percentile";
-  private static final String AGGREGATION_RESET_PERIOD_SECONDS_PROP =
+  private static final String RESET_PERIOD_SECONDS_PROP =
       "aggregationResetPeriodSeconds";
   private static final String COMPARISON_PROP = "comparison";
   private static final String VALUE_PROP = "value";
@@ -60,12 +60,12 @@ public class AutoStopConditionElement extends AbstractTestElement {
     setProperty(new DoubleProperty(PERCENTILE_PROP, percentile));
   }
 
-  public long getAggregationResetPeriodSeconds() {
-    return getPropertyAsLong(AGGREGATION_RESET_PERIOD_SECONDS_PROP);
+  public long getResetPeriodSeconds() {
+    return getPropertyAsLong(RESET_PERIOD_SECONDS_PROP);
   }
 
-  public void setAggregationResetPeriodSeconds(long aggregationResetPeriod) {
-    setProperty(AGGREGATION_RESET_PERIOD_SECONDS_PROP, aggregationResetPeriod);
+  public void setResetPeriodSeconds(long aggregationResetPeriod) {
+    setProperty(RESET_PERIOD_SECONDS_PROP, aggregationResetPeriod);
   }
 
   public String getComparison() {
@@ -124,7 +124,7 @@ public class AutoStopConditionElement extends AbstractTestElement {
     if (getRegex() != null && !result.getSampleLabel().matches(getRegex())) {
       return false;
     }
-    return getAggregationResetPeriodSeconds() == 0 ? isMatchNow(result) : isMatchSlot(result);
+    return getResetPeriodSeconds() == 0 ? isMatchNow(result) : isMatchSlot(result);
   }
 
   private boolean isMatchNow(SampleResult result) {
@@ -160,7 +160,7 @@ public class AutoStopConditionElement extends AbstractTestElement {
   private boolean isMatchSlot(SampleResult result) {
     Instant currentSlotStart = findSlotStart();
     while (!slotStart.equals(currentSlotStart)) {
-      Instant slotEnd = slotStart.plusSeconds(getAggregationResetPeriodSeconds());
+      Instant slotEnd = slotStart.plusSeconds(getResetPeriodSeconds());
       if (isMatchAt(slotEnd)) {
         return true;
       }
@@ -173,7 +173,7 @@ public class AutoStopConditionElement extends AbstractTestElement {
 
   private Instant findSlotStart() {
     long startMillis = slotStart.toEpochMilli();
-    long slotMillis = getAggregationResetPeriodSeconds() * 1000;
+    long slotMillis = getResetPeriodSeconds() * 1000;
     long nowMillis = clock.instant().toEpochMilli();
     return slotStart.plusMillis(((nowMillis - startMillis) / slotMillis) * slotMillis);
   }
