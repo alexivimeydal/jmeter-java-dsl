@@ -34,46 +34,74 @@ public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGro
 
   @Override
   public AbstractThreadGroup buildThreadGroup() {
+    if (stages.isEmpty()) {
+      return buildSimpleThreadGroupFrom(1, 1, null, null, null);
+    }
+
+    ThreadGroupParams params = initializeParamsFromFirstStage(stages.get(0));
+
+    if (stages.size() > 1) {
+      updateParamsForSecondStage(params, stages.get(1));
+      if (isZeroThreadCount(stages.get(0)) && stages.size() > 2) {
+        updateParamsForThirdStage(params, stages.get(2));
+      }
+    }
+
+    params.duration = adjustDurationForRampUpPeriod(params.rampUpPeriod, params.iterations, params.duration);
+
+    return buildSimpleThreadGroupFrom(params.threads, params.iterations, params.rampUpPeriod, params.duration, params.delay);
+  }
+
+  private ThreadGroupParams initializeParamsFromFirstStage(Stage firstStage) {
+    ThreadGroupParams params = new ThreadGroupParams();
+    if (isZeroThreadCount(firstStage)) {
+      params.delay = firstStage.duration();
+    } else {
+      params.threads = firstStage.threadCount();
+      params.iterations = firstStage.iterations();
+      if (firstStage.iterations() == null) {
+        params.rampUpPeriod = firstStage.duration();
+      } else {
+        params.duration = firstStage.duration();
+      }
+    }
+    return params;
+  }
+
+  private void updateParamsForSecondStage(ThreadGroupParams params, Stage secondStage) {
+    params.threads = secondStage.threadCount();
+    params.iterations = secondStage.iterations();
+    if (isZeroThreadCount(stages.get(0))) {
+      params.rampUpPeriod = secondStage.duration();
+    } else {
+      params.duration = secondStage.duration();
+    }
+  }
+
+  private void updateParamsForThirdStage(ThreadGroupParams params, Stage thirdStage) {
+    params.duration = thirdStage.duration();
+    params.iterations = thirdStage.iterations();
+  }
+
+  private boolean isZeroThreadCount(Stage stage) {
+    return ZERO.equals(stage.threadCount());
+  }
+
+  private Object adjustDurationForRampUpPeriod(Object rampUpPeriod, Object iterations, Object duration) {
+    if (rampUpPeriod != null && !Duration.ZERO.equals(rampUpPeriod) && (iterations == null || duration != null)) {
+      return duration != null ? sumDurations(duration, rampUpPeriod) : rampUpPeriod;
+    }
+    return duration;
+  }
+
+  private class ThreadGroupParams {
     Object threads = 1;
     Object iterations = 1;
     Object rampUpPeriod = null;
     Object duration = null;
     Object delay = null;
-    if (!stages.isEmpty()) {
-      Stage firstStage = stages.get(0);
-      if (ZERO.equals(firstStage.threadCount())) {
-        delay = firstStage.duration();
-      } else {
-        threads = firstStage.threadCount();
-        iterations = firstStage.iterations();
-        if (firstStage.iterations() == null) {
-          rampUpPeriod = firstStage.duration();
-        } else {
-          duration = firstStage.duration();
-        }
-      }
-      if (stages.size() > 1) {
-        Stage secondStage = stages.get(1);
-        threads = secondStage.threadCount();
-        iterations = secondStage.iterations();
-        if (ZERO.equals(firstStage.threadCount())) {
-          rampUpPeriod = secondStage.duration();
-          if (stages.size() > 2) {
-            Stage lastStage = stages.get(2);
-            duration = lastStage.duration();
-            iterations = lastStage.iterations();
-          }
-        } else {
-          duration = secondStage.duration();
-        }
-      }
-    }
-    if (rampUpPeriod != null && !Duration.ZERO.equals(rampUpPeriod) &&
-        (iterations == null || duration != null)) {
-      duration = duration != null ? sumDurations(duration, rampUpPeriod) : rampUpPeriod;
-    }
-    return buildSimpleThreadGroupFrom(threads, iterations, rampUpPeriod, duration, delay);
   }
+
 
   private Object sumDurations(Object duration, Object rampUpPeriod) {
     if (duration instanceof Duration && rampUpPeriod instanceof Duration) {
