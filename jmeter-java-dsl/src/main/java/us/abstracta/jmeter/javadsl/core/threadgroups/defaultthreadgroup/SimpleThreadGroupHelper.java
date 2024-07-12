@@ -20,6 +20,7 @@ import us.abstracta.jmeter.javadsl.codegeneration.params.IntParam;
 import us.abstracta.jmeter.javadsl.codegeneration.params.StringParam;
 import us.abstracta.jmeter.javadsl.core.threadgroups.BaseThreadGroup;
 import us.abstracta.jmeter.javadsl.core.threadgroups.DslDefaultThreadGroup;
+import us.abstracta.jmeter.javadsl.core.threadgroups.config.ThreadGroupConfig;
 import us.abstracta.jmeter.javadsl.core.util.JmeterFunction;
 
 public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGroup> {
@@ -35,7 +36,8 @@ public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGro
   @Override
   public AbstractThreadGroup buildThreadGroup() {
     if (stages.isEmpty()) {
-      return buildSimpleThreadGroupFrom(1, 1, null, null, null);
+      ThreadGroupConfig threadGroupConfig = new ThreadGroupConfig(1, 1, null, null, null);
+      return buildSimpleThreadGroupFrom(threadGroupConfig);
     }
 
     ThreadGroupParams params = initializeParamsFromFirstStage(stages.get(0));
@@ -49,7 +51,7 @@ public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGro
 
     params.duration = adjustDurationForRampUpPeriod(params.rampUpPeriod, params.iterations, params.duration);
 
-    return buildSimpleThreadGroupFrom(params.threads, params.iterations, params.rampUpPeriod, params.duration, params.delay);
+    return buildSimpleThreadGroupFrom(new ThreadGroupConfig(params.threads, params.iterations, params.rampUpPeriod, params.duration, params.delay));
   }
 
   private ThreadGroupParams initializeParamsFromFirstStage(Stage firstStage) {
@@ -135,25 +137,30 @@ public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGro
         + "'.replace('" + altPlaceHolder + "','$')).execute() as int)";
   }
 
-  private ThreadGroup buildSimpleThreadGroupFrom(Object threads, Object iterations,
-      Object rampUpPeriod, Object duration, Object delay) {
+  private ThreadGroup buildSimpleThreadGroupFrom(ThreadGroupConfig config) {
     ThreadGroup ret = new ThreadGroup();
-    setIntProperty(ret, ThreadGroup.NUM_THREADS, threads);
-    setIntProperty(ret, ThreadGroup.RAMP_TIME, rampUpPeriod == null ? Duration.ZERO : rampUpPeriod);
+    Object configThreads = config.getThreads();
+    Object configIterations = config.getIterations();
+    Object configRampUpPeriod = config.getRampUpPeriod();
+    Object configDuration = config.getDuration();
+    Object configDelay = config.getDelay();
+
+    setIntProperty(ret, ThreadGroup.NUM_THREADS, configThreads);
+    setIntProperty(ret, ThreadGroup.RAMP_TIME, configRampUpPeriod == null ? Duration.ZERO : configRampUpPeriod);
     LoopController loopController = new LoopController();
     ret.setSamplerController(loopController);
-    if (iterations == null) {
+    if (configIterations == null) {
       loopController.setLoops(-1);
     } else {
-      setIntProperty(loopController, LoopController.LOOPS, iterations);
+      setIntProperty(loopController, LoopController.LOOPS, configIterations);
     }
-    if (duration != null) {
-      setLongProperty(ret, ThreadGroup.DURATION, duration);
+    if (configDuration != null) {
+      setLongProperty(ret, ThreadGroup.DURATION, configDuration);
     }
-    if (delay != null) {
-      setLongProperty(ret, ThreadGroup.DELAY, delay);
+    if (configDelay != null) {
+      setLongProperty(ret, ThreadGroup.DELAY, configDelay);
     }
-    if (duration != null || delay != null) {
+    if (configDuration != null || configDelay != null) {
       ret.setScheduler(true);
     }
     ret.setIsSameUserOnNextIteration(false);
