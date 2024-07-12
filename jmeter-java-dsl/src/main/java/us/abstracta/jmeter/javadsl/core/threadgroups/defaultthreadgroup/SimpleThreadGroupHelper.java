@@ -51,7 +51,8 @@ public class SimpleThreadGroupHelper extends BaseThreadGroup<DslDefaultThreadGro
 
     params.duration = adjustDurationForRampUpPeriod(params.rampUpPeriod, params.iterations, params.duration);
 
-    return buildSimpleThreadGroupFrom(new ThreadGroupConfig(params.threads, params.iterations, params.rampUpPeriod, params.duration, params.delay));
+    ThreadGroupConfig threadGroupConfig = new ThreadGroupConfig(params.threads, params.iterations, params.rampUpPeriod, params.duration, params.delay);
+    return buildSimpleThreadGroupFrom(threadGroupConfig);
   }
 
   private ThreadGroupParams initializeParamsFromFirstStage(Stage firstStage) {
